@@ -1,21 +1,58 @@
 #!/bin/bash
 
-# Jeśli nie ma uruchomionej żadnej sesji tmux -> wyjście ze skryptu:
+function ATTACH_SESSION {
+    tmux attach -t $session
+    clear
+}
+
+function DETACH_SESSION {
+    clear
+    tmux detach
+}
+
+function KILL_SESSION {
+    tmux kill-session -t $(tmux list-sessions | egrep "(attached)" | awk '{printf $1}' | sed 's/\:/\n/')
+}
+
+function CREATE_NEW_SESSION {
+    # można się pobawić w pętlę while:
+    read -p "Podaj nazwę dla nowej sesji tmux: " nazwa_nowej_sesji
+    if [ -z "$nazwa_nowej_sesji" ]; then 
+        echo "Nie podałeś nazwy dla nowej sesji tmux."
+        return 1
+    fi
+    clear
+    tmux new -s $nazwa_nowej_sesji
+    return 0
+} # koniec funkcji CREATE_NEW_SESSION
+
+function OPEN_EXISTING_SESSION {
+    tmux_sessions_list="[ANULUJ] $(tmux list-sessions | awk '{printf $1}' | sed 's/\:/\n/g')"
+    PS3='Wybierz sesję tmux: ' # Komunikat opisujący listę opcji
+    printf "%b" "\a\n\nLista dostępnych sesji tmux:\n" >&2
+    select session in $tmux_sessions_list; do
+    # Choć użytkownik wpisuje wartość liczbową, która jest przechowywana w zmiennej        
+    # $REPLY, instrukcja select zwraca ciąg tekstowy opcji
+        if [ "$session" = "anuluj" ]; then 
+            clear
+            return 1
+        elif [ -n "$session" ]; then           
+            ATTACH_SESSION
+            return 0
+        else           
+            echo "Nie ma takiej sesji!"       
+            return 1
+        fi # koniec analizy odpowiedzi użytkownika    
+    done # koniec procedury wyboru sesji tmux
+}
+
+# Jeśli nie ma uruchomionej żadnej sesji tmux ...
 tmux has-session 2>/dev/null
 if [ $? != 0 ]; then
     echo "Tmux nie ma jeszcze uruchomionej żadnej sesji!"
     read -p "Czy uruchomić nową sesję tmux ? [t/n]" answer
     case "$answer" in
-        # można się pobawić w pętlę while:
-        [tT] ) read -p "Podaj nazwę dla nowej sesji tmux: " nazwa_nowej_sesji
-               if [ -z "$nazwa_nowej_sesji" ]; then 
-                   echo "Nie podałeś nazwy dla nowej sesji tmux."
-                   return 1
-               fi
-               clear
-               tmux new -s $nazwa_nowej_sesji
-               return 0
-               ;;
+        [tT] ) CREATE_NEW_SESSION;;
         *    ) clear
                return 1
                ;;
@@ -27,9 +64,12 @@ fi
 tmux list-sessions | egrep -q "(attached)"
 if [ $? -eq 0 ]; then # jeśli poprzednia komenda została zakończona bezbłędnie
     echo "Działasz już w aktywnej sesji tmux!"
-    read -p "Czy chcesz ją zakończyć i uruchomić inną dostępną sesję ? W celu uruchomienia nowej sesji uruchom ten skrypt ponownie. [t/n]" answer
+    read -p "Czy chcesz ją odłączyć [d] lub zakończyć [k] aktywną sesję ? (W celu uruchomienia nowej sesji uruchom ten skrypt ponownie.)" answer
     case "$answer" in
-        [tT] ) tmux kill-session -t $(tmux list-sessions | egrep "(attached)" | awk '{printf $1}' | sed 's/\:/\n/')
+        [kK] ) KILL_SESSION
+               return 0
+               ;;
+        [dD] ) DETACH_SESSION
                return 0
                ;;
         *    ) clear
@@ -39,27 +79,10 @@ if [ $? -eq 0 ]; then # jeśli poprzednia komenda została zakończona bezbłęd
 fi
 
 # Procedura urochomienia jednej z dostępnych sesji tmux:
-read -p "Czy chcesz uruchomić którąś z dostępnych sesji tmux ? [t/n]" answer
+read -p "Czy chcesz uruchomić którąś z dostępnych sesji tmux [a] lub utworzyć nową [n] ? (Dowolny przycisk w celu anulowania.)" answer
 case "$answer" in
-    [tT] ) tmux_sessions_list="[ANULUJ] $(tmux list-sessions | awk '{printf $1}' | sed 's/\:/\n/g')"
-           PS3='Wybierz sesję tmux: ' # Komunikat opisujący listę opcji
-           printf "%b" "\a\n\nLista dostępnych sesji tmux:\n" >&2
-           select session in $tmux_sessions_list; do
-               # Choć użytkownik wpisuje wartość liczbową, która jest przechowywana w zmiennej        
-               # $REPLY, instrukcja select zwraca ciąg tekstowy opcji
-               if [ "$session" = "anuluj" ]; then 
-                   clear
-                   return 1
-               elif [ -n "$session" ]; then           
-                   tmux attach -t $session
-                   clear
-                   return 0 
-               else           
-                   echo "Nie ma takiej sesji!"       
-                   return 1
-               fi # koniec analizy odpowiedzi użytkownika    
-           done # koniec procedury wyboru sesji tmux   
-           ;;
+    [aA] ) OPEN_EXISTING_SESSION;;
+    [nN] ) CREATE_NEW_SESSION;;
     *    ) clear
            return 1
            ;;
