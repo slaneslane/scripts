@@ -29,7 +29,7 @@ if [ $? -eq 0 ]; then # jeśli poprzednia komenda została zakończona bezbłęd
     echo "Działasz już w aktywnej sesji tmux!"
     read -p "Czy chcesz ją zakończyć i uruchomić inną dostępną sesję ? [t/n]" answer
     case "$answer" in
-        [tT] ) tmux kill-session -t $(tmux_sessions_list | egrep "(attached)" | awk '{printf $1}' | sed 's/\:/\n/')
+        [tT] ) tmux kill-session -t $(tmux list-sessions | egrep "(attached)" | awk '{printf $1}' | sed 's/\:/\n/')
                ;;
         *    ) clear
                return 1
