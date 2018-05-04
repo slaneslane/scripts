@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Zbierz wszystkie dostępne nazwy projektów (katalogów) w danym folderze:
+
+# Przedstaw użytkownikowi listę dostępnych projektów:
+
+# Dla wybranego projektu odpal środowisko virtualenv (znajdujący się w środku katalogu wybranego projektu):
+
+# W odpalonym środowisu wirtualnym uruchom tmux:
+
+# W tmux odpal vima wraz z ostatnio edytowanymi plikami (lub ostatnią sesję):
+
+if [ $(pwd) == $HOME ]; then
+    read -p "Czy chcesz uruchomić środowisko dla jednego z projektów?? [t/n=dowolny znak]" answer
+    case "$answer" in
+        [tT] ) projectslist="anuluj $(for i in ~/Projects/*;do [ -d "$i" ] && echo $i | sed 's!.*/!!' ; done)"
+            PS3='Wybierz projekt: ' # Komunikat opisujący listę opcji
+            printf "%b" "\a\n\nLista dostępnych projektów:\n" >&2
+            select project in $projectslist; do
+                # Choć użytkownik wpisuje wartość liczbową, która jest przechowywana w zmiennej        
+                # $REPLY, instrukcja select zwraca ciąg tekstowy opcji
+                if [ "$project" = "anuluj" ]; then 
+                    break
+                elif [ -n "$project" ]; then           
+                    cd ~/Projects/$project && clear && tmux
+                    break 
+                else           
+                    echo "Nie ma takiego projektu!"       
+                    break
+                fi # koniec analizy odpowiedzi użytkownika    
+            done # koniec procedury wyboru projektu
+            ;;
+        * ) clear
+            ;;
+    esac # koniec wyboru tak / nie i zarazem koniec skryptu
+fi
