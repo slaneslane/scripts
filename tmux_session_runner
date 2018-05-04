@@ -30,6 +30,8 @@ if [ $? -eq 0 ]; then # jeśli poprzednia komenda została zakończona bezbłęd
     read -p "Czy chcesz ją zakończyć i uruchomić inną dostępną sesję ? [t/n]" answer
     case "$answer" in
         [tT] ) tmux kill-session -t $(tmux list-sessions | egrep "(attached)" | awk '{printf $1}' | sed 's/\:/\n/')
+               echo "W celu uruchomienia nowej sesji uruchom ten skrypt ponownie."
+               return 0
                ;;
         *    ) clear
                return 1
