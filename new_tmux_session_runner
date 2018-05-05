@@ -82,24 +82,12 @@ menu_options="[ANULUJ] Utwórz_nową_sesję Otwórz_dostępną_sesję Odłącz_b
 PS3='Wybierz opcję: ' # Komunikat opisujący listę opcji
 printf "%b" "\a\nWybierz spośród dostępnych opcji:\n" >&2
 select option in $menu_options; do
-# $REPLY, instrukcja select zwraca ciąg tekstowy opcji
-    if [ "$REPLY" = 1 ]; then 
-        clear
-        return 1
-    elif [ "$REPLY" = 2 ]; then           
-        CREATE_NEW_SESSION
-        return 0
-    elif [ "$REPLY" = 3 ]; then           
-        OPEN_EXISTING_SESSION
-        return 0
-    elif [ "$REPLY" = 4 ]; then           
-        DETACH_SESSION
-        return 0
-    elif [ "$REPLY" = 5 ]; then           
-        KILL_SESSION
-        return 0
-    else           
-        echo "Nie ma takiej opcji!"       
-        return 1
-    fi # koniec analizy odpowiedzi użytkownika    
+    case "$REPLY" in
+        1) clear; return 1;;
+        2) CREATE_NEW_SESSION; return 0;;
+        3) OPEN_EXISTING_SESSION; return 0;;
+        4) DETACH_SESSION; return 0;;
+        5) KILL_SESSION; return 0;;
+        *) echo "Nie ma takiej opcji!"; return 1;;
+    esac # koniec analizy odpowiedzi użytkownika
 done # koniec procedury wyboru sesji tmux
