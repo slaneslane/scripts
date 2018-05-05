@@ -3,9 +3,11 @@
 # W wybranym katalogu projektu muszą znajdować się poniższe katalogi (lub przynajmniej jeden z nich):
 # /tests/
 # /functional_tests/
+funcTestDirName='functional_tests'
+unitTestDirName='tests'
 
 projectslist="[ANULUJ] $(for i in ~/Projects/*; do [ -d "$i" ] && echo $i | sed 's!.*/!!' ; done)"
-PS3='Wybierz projekt: ' # Komunikat opisujący listę opcji
+PS3='Wybierz opcję: ' # Komunikat opisujący listę opcji
 printf "%b" "\a\n\nLista dostępnych projektów:\n" >&2
 select project in $projectslist; do
     # $REPLY, instrukcja select zwraca ciąg tekstowy opcji
@@ -20,25 +22,68 @@ select project in $projectslist; do
             return 1
         fi
 
-        functional_tests_dir=$(find $project_dir -type d -name "functional_tests" | sed 's/\s/\n/g')
-        unit_tests_dir=$(find $project_dir -maxdepth 2 -type d -name "tests" -not -path "$project_dir/*static/*")
+        functional_tests_dir=$(find $project_dir -type d -name $funcTestDirName | sed 's/\s/\n/g')
+        unit_tests_dir=$(find $project_dir -maxdepth 2 -type d -name $unitTestDirName -not -path "$project_dir/*static/*")
         
         if [ -n "$functional_tests_dir" ] && [ -n "$unit_tests_dir" ]; then
             testslist="[ANULUJ] wszystkie_testy testy_funkcjonalne klasa_testów_funkcjonalnych pojedynczy_test_funkcjonalny testy_jednostkowe klasa_testów_jednostkowych pojedynczy_test_jednostkowy"
-            ps3='wybierz zestaw testów do wykonania: ' # komunikat opisujący listę opcji
-            printf "%b" "\a\nlista dostępnych testów:\n" >&2
+            ps3='wybierz opcję: ' # komunikat opisujący listę opcji
+            printf "%b" "\a\nlista dostępnych zestawów testów:\n" >&2
             select test_set in $testslist; do
                 case $REPLY in
                     1) break;;
                     2) $($test_command $project_dir); break;; # echo "wybrano wszystkie_testy ";;
                     3) $($test_command $functional_tests_dir); break;; #dla pojedynczego katalogu!
-                    4) echo "klasa testów funkcjonalnych";;
-                    5) echo "pojedynczy test funkcjonalny";;
+                    4) classeslist="[ANULUJ] $(egrep 'class ' $functional_tests_dir/* 2>/dev/null | awk '{printf $2}' | sed 's/([^)]*):/ /g')"
+                       ps3='wybierz opcję: '
+                       printf "%b" "\a\nlista dostępnych testów klass:\n" >&2
+                       select class in $classeslist; do
+                           if [ "$class" = "[ANULUJ]" ]; then 
+                               return 1
+                           elif [ -n "$class" ]; then           
+                               $($test_command $funcTestDirName.$(egrep "class $class" $functional_tests_dir/* 2>/dev/null | sed 's!.*/!!;s/([^)]*)://g;s/py:class //g'))
+                           else           
+                               echo "Nie ma takiej klasy!"       
+                               break
+                           fi # koniec analizy odpowiedzi użytkownika 
+                       done
+                       ;;
+                    5) funclist="[ANULUJ] $(egrep 'def ' $functional_tests_dir/* 2>/dev/null | sed 's/^.*def //' | egrep '^test_' | sed 's/test_//;s/([^)]*)://g')"
+                       ps3='wybierz opcję: '
+                       printf "%b" "\a\nlista dostępnych pojedynczych testów:\n" >&2
+                       select func in $funclist; do
+                           if [ "$func" = "[ANULUJ]" ]; then 
+                               return 1
+                           elif [ -n "$func" ]; then      
+                               filepath=$(egrep "def test_$func" $functional_tests_dir/* 2>/dev/null | awk '{printf $1}' | sed 's/://g')
+                               filename=$(basename $filepath .py)
+                               testclass=$(egrep "class | def test_$func" $functional_tests_dir/* 2>/dev/null | grep -B 1 'def' | egrep 'class ' | awk '{printf $2}' | sed 's/([^)]*)://g')
+                               $($test_command $funcTestDirName.$filename.$testclass.test_$func)
+                           else           
+                               echo "Nie ma takiego testu!"       
+                               break
+                           fi # koniec analizy odpowiedzi użytkownika 
+                       done
+                       ;;
                     6) for tests in $unit_tests_dir; do
                            $($test_command $tests);
                        done 
                        break;;
-                    7) echo "klasa testów jednostkowych";;
+                    7) classeslist="[ANULUJ] $(egrep 'class ' $unit_tests_dir/* 2>/dev/null | awk '{printf $2}' | sed 's/([^)]*):/ /g')"
+                       ps3='wybierz opcję: '
+                       printf "%b" "\a\nlista dostępnych testów klass:\n" >&2
+                       select class in $classeslist; do
+                           if [ "$class" = "[ANULUJ]" ]; then 
+                               return 1
+                           elif [ -n "$class" ]; then           
+                               prefix=$(echo ${unit_tests_dir#"$project_dir"} | sed 's/\//./g;s/^.//') # removing the common change of two paths
+                               $($test_command $prefix.$(egrep "class $class" $unit_tests_dir/* 2>/dev/null | sed 's!.*/!!;s/([^)]*)://g;s/py:class //g'))
+                           else           
+                               echo "Nie ma takiej klasy!"
+                               break
+                           fi # koniec analizy odpowiedzi użytkownika 
+                       done
+                       ;;
                     8) echo "pojedynczy test jednostkowy";;
                     *) echo "Nie ma takiej opcji!"
                 esac
