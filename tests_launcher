@@ -84,7 +84,25 @@ select project in $projectslist; do
                            fi # koniec analizy odpowiedzi użytkownika 
                        done
                        ;;
-                    8) echo "pojedynczy test jednostkowy";;
+                    8) funclist="[ANULUJ] $(egrep 'def ' $unit_tests_dir/* 2>/dev/null | sed 's/^.*def //' | egrep '^test_' | sed 's/test_//;s/([^)]*)://g')"
+                       ps3='wybierz opcję: '
+                       printf "%b" "\a\nlista dostępnych pojedynczych testów:\n" >&2
+                       select func in $funclist; do
+                           if [ "$func" = "[ANULUJ]" ]; then 
+                               return 1
+                           elif [ -n "$func" ]; then      
+                               filepathandname=$(egrep "def test_$func" $unit_tests_dir/* 2>/dev/null | awk '{printf $1}' | sed 's/://g')
+                               filename=$(basename $filepathandname .py)
+                               testclass=$(egrep "class | def test_$func" $unit_tests_dir/* 2>/dev/null | grep -B 1 'def' | egrep 'class ' | awk '{printf $2}' | sed 's/([^)]*)://g')
+                               echo $testclass
+                               prefix=$(echo ${unit_tests_dir#"$project_dir"} | sed 's/\//./g;s/^.//') # removing the common change of two paths
+                               $($test_command $prefix.$filename.$testclass.test_$func)
+                           else           
+                               echo "Nie ma takiego testu!"       
+                               break
+                           fi # koniec analizy odpowiedzi użytkownika 
+                       done
+                       ;;
                     *) echo "Nie ma takiej opcji!"
                 esac
             done
