@@ -22,7 +22,7 @@ if [ $(pwd) == $HOME ]; then
                 if [ "$project" = "anuluj" ]; then 
                     break
                 elif [ -n "$project" ]; then           
-                    cd ~/Projects/$project && clear && tmux
+                    cd ~/Projects/$project && clear && nts
                     break 
                 else           
                     echo "Nie ma takiego projektu!"       
