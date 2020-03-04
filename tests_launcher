@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # W wybranym katalogu projektu muszą znajdować się poniższe katalogi (lub przynajmniej jeden z nich):
 # /tests/
 # /functional_tests/
